@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.traincheckinapp"
-        minSdk = 24
+        minSdk = 28
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -56,6 +56,13 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.google.code.gson:gson:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    implementation ("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation ("com.google.android.gms:play-services-location:18.0.0")
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("com.google.android.gms:play-services-location:19.0.1")
+    implementation("com.google.android.material:material:1.9.0")
+    implementation("androidx.navigation:navigation-compose:2.5.3")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
