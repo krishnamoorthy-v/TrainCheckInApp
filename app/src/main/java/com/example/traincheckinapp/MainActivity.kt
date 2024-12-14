@@ -70,6 +70,7 @@ import com.example.traincheckinapp.models.Login
 import com.example.traincheckinapp.models.LoginResponse
 import com.example.traincheckinapp.models.SignUpResponse
 import com.example.traincheckinapp.models.User
+import com.example.traincheckinapp.storage.UserSession
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
 import com.google.android.gms.location.GeofencingRequest
@@ -79,6 +80,7 @@ import java.util.concurrent.Executor
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+
 
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -337,7 +339,6 @@ fun SignupPage(navController: NavHostController) {
         return aadhaar.matches(Regex("^[0-9]{12}$"))
     }
 
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -434,79 +435,77 @@ fun SignupPage(navController: NavHostController) {
             color = Color.Red,
             style = MaterialTheme.typography.bodySmall
         )
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Button(
+        onClick = {
+            if (name.isNotEmpty() && email.isNotEmpty() && mobile.isNotEmpty() && aadhaarNumber.isNotEmpty() &&
+                password.isNotEmpty() && confirmPassword.isNotEmpty() &&
+                validateAadhaar(aadhaarNumber) && password == confirmPassword
+            ) {
 
 
-        Spacer(modifier = Modifier.height(16.dp))
+                val user = User(
+                    name = name,
+                    email = email.trim(),
+                    mobile = mobile.toLong(),
+                    aadhaar = aadhaarNumber.toLong(),
+                    password = password
+                )
 
-        Button(
-            onClick = {
+                RetrofitClient.instance.signUp(user)
+                    .enqueue(object : Callback<SignUpResponse> {
+                        override fun onFailure(call: Call<SignUpResponse>, t: Throwable) {
+                            Toast.makeText(context, t.message, Toast.LENGTH_LONG).show()
+                            Log.e("Signup", t.message.toString())
+                        }
 
-                if (name.isNotEmpty() && email.isNotEmpty() && mobile.isNotEmpty() && aadhaarNumber.isNotEmpty() &&
-                    password.isNotEmpty() && confirmPassword.isNotEmpty() &&
-                    validateAadhaar(aadhaarNumber) && password == confirmPassword
-                ) {
+                        override fun onResponse(
+                            call: Call<SignUpResponse>,
+                            response: Response<SignUpResponse>
+                        ) {
+                            if (response.code() == 400) {
+                                val gson = Gson()
+                                val errorResponse: SignUpResponse = gson.fromJson(
+                                    response.errorBody()?.string(),
+                                    SignUpResponse::class.java
+                                )
+                                errorMessage = errorResponse.message
+                                Log.e("Sigup", errorResponse.message)
 
-
-                    val user = User(
-                        name = name,
-                        email = email.trim(),
-                        mobile = mobile.toLong(),
-                        aadhaar = aadhaarNumber.toLong(),
-                        password = password
-                    )
-
-                    RetrofitClient.instance.signUp(user)
-                        .enqueue(object : Callback<SignUpResponse> {
-                            override fun onFailure(call: Call<SignUpResponse>, t: Throwable) {
-                                Toast.makeText(context, t.message, Toast.LENGTH_LONG).show()
-                                Log.e("Signup", t.message.toString())
+                            } else if (response.code() == 200) {
+                                Toast.makeText(
+                                    context,
+                                    response.body()?.message,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                Log.d("Signup", response.body()?.message.toString())
+                                navController.navigate("login")
                             }
+                        }
+                    })
 
-                            override fun onResponse(
-                                call: Call<SignUpResponse>,
-                                response: Response<SignUpResponse>
-                            ) {
-                                if (response.code() == 400) {
-                                    val gson = Gson()
-                                    val errorResponse: SignUpResponse = gson.fromJson(
-                                        response.errorBody()?.string(),
-                                        SignUpResponse::class.java
-                                    )
-                                    errorMessage = errorResponse.message
-                                    Log.e("Sigup", errorResponse.message)
-
-                                } else if (response.code() == 200) {
-                                    Toast.makeText(
-                                        context,
-                                        response.body()?.message,
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    Log.d("Signup", response.body()?.message.toString())
-                                    navController.navigate("login")
-                                }
-                            }
-                        })
-
-                } else {
-                    // Check for which field is invalid and show specific error messages
-                    errorMessage = when {
-                        name.isEmpty() -> "Name is required."
-                        email.isEmpty() -> "Email is required."
-                        mobile.isEmpty() -> "Mobile number is required."
-                        aadhaarNumber.isEmpty() -> "Aadhaar number is required."
-                        password.isEmpty() -> "Password is required."
-                        confirmPassword.isEmpty() -> "Confirm Password is required."
-                        !validateAadhaar(aadhaarNumber) -> "Aadhaar number must be exactly 12 digits."
-                        password != confirmPassword -> "Passwords do not match."
-                        else -> "Please fill all the fields correctly."
-                    }
+            } else {
+                // Check for which field is invalid and show specific error messages
+                errorMessage = when {
+                    name.isEmpty() -> "Name is required."
+                    email.isEmpty() -> "Email is required."
+                    mobile.isEmpty() -> "Mobile number is required."
+                    aadhaarNumber.isEmpty() -> "Aadhaar number is required."
+                    password.isEmpty() -> "Password is required."
+                    confirmPassword.isEmpty() -> "Confirm Password is required."
+                    !validateAadhaar(aadhaarNumber) -> "Aadhaar number must be exactly 12 digits."
+                    password != confirmPassword -> "Passwords do not match."
+                    else -> "Please fill all the fields correctly."
                 }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Sign Up", color = Color.White)
-        }
+            }
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Sign Up", color = Color.White)
     }
 }
 
@@ -530,7 +529,6 @@ fun LoginPage(navController: NavHostController) {
             return ""
         }
     }
-
 
     Column(
         modifier = Modifier
@@ -625,7 +623,10 @@ fun LoginPage(navController: NavHostController) {
                                         "successfully logged in",
                                         Toast.LENGTH_LONG
                                     ).show()
+                                    UserSession.userId = response.body()?.message.toString()
                                     Log.d("Login", response.body()?.message.toString())
+
+
                                     navController.navigate("check_in")
                                 }
                             }
@@ -658,6 +659,7 @@ fun LoginPage(navController: NavHostController) {
 
 @Composable
 fun OTPCheckInPage(navController: NavHostController) {
+
     var otp by remember { mutableStateOf("") }
     var otpStatus by remember { mutableStateOf("OTP Pending...") }
     var isGeofenceEntered by remember { mutableStateOf(false) }
@@ -811,42 +813,39 @@ class GeofenceService : IntentService("GeofenceService") {
 
 @Composable
 fun CheckInPage(navController: NavHostController) {
-    var checkInStatus by remember { mutableStateOf("Check-In Pending...") }
-
-    fun performCheckIn() {
-        checkInStatus = "Check-In Successful! Welcome aboard."
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .background(Color(0xFFF3F4F6)),
+            .background(Color.White),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             "Your Journey Awaits",
             style = MaterialTheme.typography.headlineLarge,
-            color = Color(0xFF6200EE)
+            color = Color(0xFFDC143C)
         )
         Spacer(modifier = Modifier.height(32.dp))
-        Text("Check-In", style = MaterialTheme.typography.headlineLarge, color = Color(0xFF6200EE))
+        Text("Check-In", style = MaterialTheme.typography.headlineLarge, color = Color(0xFFDC143C))
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = { performCheckIn() },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EE)),
+            onClick = { navController.navigate("otp_check_in") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC143C)),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Start Check-In", color = Color.White)
+            Text("OTP Check-In", color = Color.White)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            checkInStatus,
-            color = if (checkInStatus.contains("Successful")) Color.Green else Color.Red
-        )
+        Button(
+            onClick = { navController.navigate("biometric_check_in") },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC143C)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Biometric Check-In", color = Color.White)
+        }
     }
 }
 
@@ -878,7 +877,7 @@ fun BiometricCheckInPage(navController: NavHostController) {
     if (activity != null) {
         val executor: Executor = ContextCompat.getMainExecutor(context)
         val biometricPrompt = remember {
-            androidx.biometric.BiometricPrompt(
+            BiometricPrompt(
                 activity,
                 executor,
                 object : BiometricPrompt.AuthenticationCallback() {
