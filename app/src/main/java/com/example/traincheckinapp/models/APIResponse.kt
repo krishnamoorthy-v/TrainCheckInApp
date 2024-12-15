@@ -12,5 +12,16 @@ data class SignUpResponse (
 
 data class LoginResponse (
     val error: Boolean,
-    val message: String
+    val message: UserInfo
 )
+
+
+data class UserInfo (
+    val name: String,
+    val email: String,
+    val mobile: Number,
+    val aadhaar: Number,
+    val password: String
+)
+
+
